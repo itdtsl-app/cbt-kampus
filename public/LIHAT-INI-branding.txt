@@ -1,0 +1,7 @@
+Taruh berkas berikut di folder ini (public/) agar tampilan sesuai identitas Anda:
+
+  logo.png        Logo (persegi, mis. 400x400 piksel, latar transparan)
+  login-bg.jpg    Foto latar halaman login (mis. 1920x1080 piksel)
+
+Jika belum ada, aplikasi otomatis memakai logo huruf dan latar gradasi biru.
+Teks nama aplikasi & tulisan halaman login diubah di: src/branding.js
