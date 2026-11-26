@@ -257,3 +257,10 @@ body { background: var(--soft); }
   .pcard { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media (max-width: 700px) { .print-sheet { grid-template-columns: 1fr; } }
+
+/* ---- pilih banyak & aksi massal ---- */
+.selbar { position: sticky; top: 60px; z-index: 4; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; }
+.selbar b { margin-right: auto; }
+tr.rowsel td { background: #eff6ff !important; }
+.danger-box { border: 1px solid #fecaca; background: #fef2f2; border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; color: #7f1d1d; }
+.danger-box p { margin: 0; }

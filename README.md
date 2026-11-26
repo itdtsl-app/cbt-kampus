@@ -42,3 +42,8 @@ Admin: menu Daftar Dosen dan Daftar Mahasiswa (cari, nonaktifkan, reset password
 1. Jalankan `supabase/sql/cbt_kampus_kartu_peserta.sql`.
 2. **Deploy ulang** Edge Function `reset-password` (kini mendukung banyak pengguna) dan `import-students` (kini mengembalikan student_id).
 Kartu peserta berisi nama, NIM, username, password, dan jadwal ujian aktif; dicetak dari hasil impor, jendela reset password, atau pilihan mahasiswa di daftar kelas.
+
+## Tambahan: tambah dosen & aksi massal
+1. Jalankan `supabase/sql/cbt_kampus_aksi_massal.sql`.
+2. Buat dua Edge Function baru: `create-user` dan `delete-users` (tempel isi file masing-masing, nama persis, lalu Deploy).
+Menu Daftar Dosen: + Tambah Dosen. Daftar Dosen/Mahasiswa: pilih banyak lalu Aksi massal (tambah/pindah/keluarkan kelas, tugaskan dosen, aktif/nonaktif, hapus).
