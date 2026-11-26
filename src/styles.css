@@ -211,3 +211,8 @@ body { background: var(--soft); }
   .dash-grid { grid-template-columns: 1fr; }
   .content { padding: 16px; }
 }
+
+/* ---- kartu statistik yang bisa diklik ---- */
+.stat.clickable { background: #fff; color: var(--ink); font-weight: 400; text-align: left; width: 100%; cursor: pointer; border: 0; }
+.stat.clickable:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform: translateY(-1px); }
+.stat.clickable small { display: block; }

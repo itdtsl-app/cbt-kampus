@@ -12,8 +12,13 @@ const storage = {
   removeItem: k => { localStorage.removeItem(k); sessionStorage.removeItem(k) },
 }
 
+const url = import.meta.env.VITE_SUPABASE_URL
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Jika kunci tidak terisi saat build, aplikasi menampilkan pesan (bukan layar kosong)
+export const configMissing = !url || !key
+
 export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  url || 'https://placeholder.supabase.co',
+  key || 'placeholder-key',
   { auth: { storage, persistSession: true, autoRefreshToken: true } }
 )

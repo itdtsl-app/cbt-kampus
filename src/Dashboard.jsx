@@ -41,9 +41,9 @@ export default function Dashboard({ profile, go }) {
 
   const v = k => (s ? s[k] : '…')
   const stats = role === 'ADMIN' ? [
-    { icon: 'users', label: 'Mahasiswa', value: v('mhs'), tone: 'blue' }, { icon: 'usercheck', label: 'Dosen', value: v('dsn'), tone: 'green' },
-    { icon: 'building', label: 'Kelas', value: v('cls'), tone: 'amber' }, { icon: 'file', label: 'Ujian aktif', value: v('act'), tone: 'violet' },
-    { icon: 'activity', label: 'Sedang mengerjakan', value: v('prog'), tone: 'rose' }]
+    { icon: 'users', label: 'Mahasiswa', value: v('mhs'), tone: 'blue', to: 'students' }, { icon: 'usercheck', label: 'Dosen', value: v('dsn'), tone: 'green', to: 'lecturers' },
+    { icon: 'building', label: 'Kelas', value: v('cls'), tone: 'amber', to: 'roster' }, { icon: 'file', label: 'Ujian aktif', value: v('act'), tone: 'violet', to: 'exams' },
+    { icon: 'activity', label: 'Sedang mengerjakan', value: v('prog'), tone: 'rose', to: 'exams' }]
   : role === 'DOSEN' ? [
     { icon: 'building', label: 'Kelas saya', value: v('cls'), tone: 'amber' }, { icon: 'users', label: 'Mahasiswa', value: v('mhs'), tone: 'blue' },
     { icon: 'book', label: 'Bank soal', value: v('banks'), tone: 'green' }, { icon: 'file', label: 'Ujian aktif', value: v('act'), tone: 'violet' }]
@@ -51,7 +51,7 @@ export default function Dashboard({ profile, go }) {
     { icon: 'file', label: 'Ujian aktif', value: v('act'), tone: 'violet' }, { icon: 'activity', label: 'Sedang mengerjakan', value: v('prog'), tone: 'rose' },
     { icon: 'alert', label: 'Pelanggaran 24 jam', value: v('viol'), tone: 'amber' }]
 
-  const actions = role === 'ADMIN' ? [['file', 'Jadwalkan ujian', 'exams'], ['upload', 'Impor mahasiswa', 'import'], ['users', 'Kelas & mahasiswa', 'roster'], ['book', 'Bank soal', 'banks']]
+  const actions = role === 'ADMIN' ? [['file', 'Jadwalkan ujian', 'exams'], ['upload', 'Impor mahasiswa', 'import'], ['users', 'Kelas & mahasiswa', 'roster'], ['book', 'Bank soal', 'banks'], ['usercheck', 'Daftar dosen', 'lecturers'], ['users', 'Daftar mahasiswa', 'students']]
     : role === 'DOSEN' ? [['building', 'Kelas saya', 'myclasses'], ['book', 'Bank soal', 'banks'], ['file', 'Jadwalkan ujian', 'exams'], ['upload', 'Impor mahasiswa', 'import']]
     : [['activity', 'Pantau ujian', 'exams']]
 
@@ -67,9 +67,12 @@ export default function Dashboard({ profile, go }) {
       </section>
 
       <section className="stats">
-        {stats.map(x => (
-          <div className="stat" key={x.label}><span className={`stat-ic ${x.tone}`}><Icon name={x.icon} size={22} /></span>
-            <div><b>{x.value}</b><small>{x.label}</small></div></div>))}
+        {stats.map(x => {
+          const inner = (<><span className={`stat-ic ${x.tone}`}><Icon name={x.icon} size={22} /></span><div><b>{x.value}</b><small>{x.label}</small></div></>)
+          return x.to
+            ? <button className="stat clickable" key={x.label} onClick={() => go(x.to)}>{inner}</button>
+            : <div className="stat" key={x.label}>{inner}</div>
+        })}
       </section>
 
       <div className="dash-grid">

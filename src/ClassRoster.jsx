@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { downloadExcel } from './importers.js'
+import ResetPasswordButton from './ResetPassword.jsx'
 
 // Admin: kelola dosen pengampu & mahasiswa. Dosen: lihat kelas yang ditugaskan (hanya baca).
 export default function Classes({ profile }) {
@@ -180,7 +181,8 @@ function ClassDetail({ cls, admin, onBack }) {
           {shown.map((s, i) => (
             <tr key={s.student_id}><td>{i + 1}</td><td>{s.nim}</td><td>{s.full_name}</td><td>{s.email}</td>
               <td><span className={`badge ${s.is_active ? 'AKTIF' : 'TERKUNCI'}`}>{s.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
-              <td className="actions"><button className="ghost danger" onClick={() => removeStudent(s)}>Keluarkan</button></td></tr>
+              <td className="actions"><ResetPasswordButton user={{ id: s.student_id, name: s.full_name }} />
+                <button className="ghost danger" onClick={() => removeStudent(s)}>Keluarkan</button></td></tr>
           ))}
           {!shown.length && <tr><td colSpan={6}>{roster.length ? 'Tidak ada yang cocok.' : 'Belum ada mahasiswa di kelas ini.'}</td></tr>}
         </tbody>

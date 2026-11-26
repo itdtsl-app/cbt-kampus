@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { supabase, configMissing } from './supabase'
 import { MENU } from './pages.jsx'
 import StudentApp from './StudentHome.jsx'
 import { LoginScreen, NewPassword } from './Login.jsx'
@@ -50,7 +50,22 @@ function Message({ profile, text }) {
   )
 }
 
+function ConfigError() {
+  return (
+    <div className="center"><div className="card" style={{ width: 'min(560px, 100%)' }}>
+      <h2>Konfigurasi belum lengkap</h2>
+      <p>Alamat dan kunci Supabase tidak terbaca saat aplikasi dibangun.</p>
+      <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
+        <li>Di GitHub: <b>Settings → Secrets and variables → Actions → Repository secrets</b>.</li>
+        <li>Pastikan ada <b>VITE_SUPABASE_URL</b> dan <b>VITE_SUPABASE_ANON_KEY</b> (nama persis, huruf besar).</li>
+        <li>Lalu jalankan ulang deploy: tab <b>Actions → Run workflow</b>.</li>
+      </ul>
+    </div></div>
+  )
+}
+
 export default function App() {
+  if (configMissing) return <ConfigError />
   const [session, setSession] = useState(undefined)
   const [profile, setProfile] = useState(null)
   const [recovery, setRecovery] = useState(false)

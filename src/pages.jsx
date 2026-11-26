@@ -4,6 +4,7 @@ import StudentImport from './StudentImport.jsx'
 import ExamsStaff from './ExamsStaff.jsx'
 import ClassRoster from './ClassRoster.jsx'
 import Dashboard from './Dashboard.jsx'
+import UserList from './UserList.jsx'
 
 const SEMESTER = ['Ganjil', 'Genap', 'Pendek']
 const ROLES = ['ADMIN', 'DOSEN', 'MAHASISWA', 'PROKTOR']
@@ -13,6 +14,8 @@ export const MENU = [
   { id: 'dashboard', icon: 'home', label: 'Dashboard', roles: ['ADMIN', 'DOSEN', 'PROKTOR'], el: (profile, go) => <Dashboard profile={profile} go={go} /> },
   { id: 'exams', icon: 'file', label: 'Ujian', roles: ['ADMIN', 'DOSEN', 'PROKTOR'], el: profile => <ExamsStaff profile={profile} /> },
   { id: 'roster', icon: 'users', label: 'Kelas & Mahasiswa', roles: ['ADMIN'], el: profile => <ClassRoster profile={profile} /> },
+  { id: 'lecturers', icon: 'usercheck', label: 'Daftar Dosen', roles: ['ADMIN'], el: () => <UserList key="dosen" role="DOSEN" /> },
+  { id: 'students', icon: 'users', label: 'Daftar Mahasiswa', roles: ['ADMIN'], el: () => <UserList key="mhs" role="MAHASISWA" /> },
   { id: 'myclasses', icon: 'users', label: 'Kelas Saya', roles: ['DOSEN'], el: profile => <ClassRoster profile={profile} /> },
   { id: 'banks', icon: 'book', label: 'Bank Soal', roles: ['ADMIN', 'DOSEN'], el: profile => <QuestionBanks profile={profile} /> },
   { id: 'import', icon: 'upload', label: 'Impor Mahasiswa', roles: ['ADMIN', 'DOSEN'], el: profile => <StudentImport profile={profile} /> },

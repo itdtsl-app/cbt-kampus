@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { readStudentRows, downloadExcel } from './importers.js'
+import { callFunction } from './functionsApi.js'
 
 const CHUNK = 25
 
@@ -34,10 +35,7 @@ export default function StudentImport({ profile }) {
     try {
       for (let i = 0; i < valid.length; i += CHUNK) {
         setProgress(`Memproses ${Math.min(i + CHUNK, valid.length)}/${valid.length}…`)
-        const { data, error } = await supabase.functions.invoke('import-students', {
-          body: { rows: valid.slice(i, i + CHUNK), class_id: classId || null },
-        })
-        if (error || data?.error) throw new Error(data?.error || error.message)
+        const data = await callFunction('import-students', { rows: valid.slice(i, i + CHUNK), class_id: classId || null })
         all.push(...data.results)
       }
       setResults(all); setRows(null); setProgress('')

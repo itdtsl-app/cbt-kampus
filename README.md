@@ -31,3 +31,9 @@ Dosen: menu Kelas Saya (+ Buat Kelas, Hapus selama belum dipakai ujian), Impor M
 Lihat panduan di chat. Ringkas: push ke repo GitHub (branch `main`), isi Secrets
 `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`, aktifkan Settings > Pages > Source: GitHub Actions.
 Workflow ada di `.github/workflows/deploy.yml`. Jangan pernah meng-commit berkas `.env`.
+
+## Tambahan: daftar pengguna & reset password
+1. Jalankan `supabase/sql/cbt_kampus_daftar_pengguna.sql`.
+2. Pasang Edge Function baru `reset-password` (tempel `supabase/functions/reset-password/index.ts`, nama persis, lalu Deploy).
+3. **Deploy ulang** `import-students` bila belum memakai versi terbaru (dosen dapat mengimpor ke kelas yang diampu).
+Admin: menu Daftar Dosen dan Daftar Mahasiswa (cari, nonaktifkan, reset password). Dosen: tombol Reset password di daftar mahasiswa kelas yang diampu.
