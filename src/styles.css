@@ -264,3 +264,9 @@ body { background: var(--soft); }
 tr.rowsel td { background: #eff6ff !important; }
 .danger-box { border: 1px solid #fecaca; background: #fef2f2; border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; color: #7f1d1d; }
 .danger-box p { margin: 0; }
+
+/* ---- ubah password ---- */
+.pwmeter { display: flex; align-items: center; gap: 10px; margin-top: -4px; }
+.pwbar { flex: 1; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.pwbar span { display: block; height: 100%; border-radius: 99px; transition: width .2s; }
+.pwmeter small { min-width: 78px; text-align: right; font-weight: 600; }

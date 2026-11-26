@@ -5,6 +5,7 @@ import StudentApp from './StudentHome.jsx'
 import { LoginScreen, NewPassword } from './Login.jsx'
 import Icon from './Icon.jsx'
 import Logo from './Logo.jsx'
+import ChangePassword from './ChangePassword.jsx'
 import { BRAND } from './branding.js'
 
 const ROLE_LABEL = { ADMIN: 'Administrator', DOSEN: 'Dosen', MAHASISWA: 'Mahasiswa', PROKTOR: 'Proktor' }
@@ -14,6 +15,7 @@ function Shell({ profile }) {
   const items = MENU.filter(m => m.roles.includes(profile.role))
   const [page, setPage] = useState(items[0].id)
   const [open, setOpen] = useState(false)
+  const [pw, setPw] = useState(false)
   const current = items.find(m => m.id === page)
   const go = id => { setPage(id); setOpen(false) }
   return (
@@ -28,10 +30,12 @@ function Shell({ profile }) {
         <div className="usercard">
           <span className="avatar">{initials(profile.full_name)}</span>
           <div><b>{profile.full_name}</b><small>{ROLE_LABEL[profile.role]}</small></div>
+          <button className="iconbtn" title="Ubah password" onClick={() => setPw(true)}><Icon name="key" size={18} /></button>
           <button className="iconbtn" title="Keluar" onClick={() => supabase.auth.signOut()}><Icon name="logout" size={18} /></button>
         </div>
       </aside>
       {open && <div className="scrim" onClick={() => setOpen(false)} />}
+      {pw && <ChangePassword onClose={() => setPw(false)} />}
       <div className="main">
         <header className="topbar">
           <button className="iconbtn burger" onClick={() => setOpen(true)}><Icon name="menu" /></button>

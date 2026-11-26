@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import ExamRunner from './ExamRunner.jsx'
 import Icon from './Icon.jsx'
 import Logo from './Logo.jsx'
+import ChangePassword from './ChangePassword.jsx'
 import { BRAND } from './branding.js'
 
 const fmt = iso => new Date(iso).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
@@ -25,6 +26,7 @@ function StudentHome({ profile, onStart }) {
   const [tick, setTick] = useState(Date.now())
   const [err, setErr] = useState('')
   const [loaded, setLoaded] = useState(false)
+  const [pw, setPw] = useState(false)
 
   const load = async () => {
     const { data, error } = await supabase.rpc('list_my_exams')
@@ -56,7 +58,8 @@ function StudentHome({ profile, onStart }) {
     <div className="stu">
       <header className="stu-top">
         <div className="brand"><Logo size={36} /><div><b>{BRAND.short}</b><small>{BRAND.tagline}</small></div></div>
-        <button className="ghost light" onClick={() => supabase.auth.signOut()}><Icon name="logout" size={16} /> Keluar</button>
+        <div className="row"><button className="ghost light" onClick={() => setPw(true)}><Icon name="key" size={16} /> Ubah password</button>
+          <button className="ghost light" onClick={() => supabase.auth.signOut()}><Icon name="logout" size={16} /> Keluar</button></div>
       </header>
 
       <section className="hero stu-hero">
@@ -101,6 +104,7 @@ function StudentHome({ profile, onStart }) {
           ))}
         </div>
       </div>
+      {pw && <ChangePassword onClose={() => setPw(false)} />}
     </div>
   )
 }

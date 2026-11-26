@@ -22,3 +22,11 @@ export const supabase = createClient(
   key || 'placeholder-key',
   { auth: { storage, persistSession: true, autoRefreshToken: true } }
 )
+
+// Memeriksa password lama memakai klien sementara agar sesi yang sedang aktif tidak terganggu.
+export async function verifyPassword(email, password) {
+  const tmp = createClient(url || 'https://placeholder.supabase.co', key || 'placeholder-key',
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+  const { error } = await tmp.auth.signInWithPassword({ email, password })
+  return !error
+}

@@ -47,3 +47,6 @@ Kartu peserta berisi nama, NIM, username, password, dan jadwal ujian aktif; dice
 1. Jalankan `supabase/sql/cbt_kampus_aksi_massal.sql`.
 2. Buat dua Edge Function baru: `create-user` dan `delete-users` (tempel isi file masing-masing, nama persis, lalu Deploy).
 Menu Daftar Dosen: + Tambah Dosen. Daftar Dosen/Mahasiswa: pilih banyak lalu Aksi massal (tambah/pindah/keluarkan kelas, tugaskan dosen, aktif/nonaktif, hapus).
+
+## Tambahan: ubah password sendiri
+Tombol kunci di kartu pengguna (staf) dan tombol "Ubah password" di header mahasiswa. Tidak perlu SQL atau Edge Function baru.
