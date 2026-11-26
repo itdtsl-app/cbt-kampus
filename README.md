@@ -37,3 +37,8 @@ Workflow ada di `.github/workflows/deploy.yml`. Jangan pernah meng-commit berkas
 2. Pasang Edge Function baru `reset-password` (tempel `supabase/functions/reset-password/index.ts`, nama persis, lalu Deploy).
 3. **Deploy ulang** `import-students` bila belum memakai versi terbaru (dosen dapat mengimpor ke kelas yang diampu).
 Admin: menu Daftar Dosen dan Daftar Mahasiswa (cari, nonaktifkan, reset password). Dosen: tombol Reset password di daftar mahasiswa kelas yang diampu.
+
+## Tambahan: kartu peserta
+1. Jalankan `supabase/sql/cbt_kampus_kartu_peserta.sql`.
+2. **Deploy ulang** Edge Function `reset-password` (kini mendukung banyak pengguna) dan `import-students` (kini mengembalikan student_id).
+Kartu peserta berisi nama, NIM, username, password, dan jadwal ujian aktif; dicetak dari hasil impor, jendela reset password, atau pilihan mahasiswa di daftar kelas.

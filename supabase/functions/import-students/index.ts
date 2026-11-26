@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       const nama = String(r.nama ?? '').trim()
       const email = (String(r.email ?? '').trim().toLowerCase()) ||
         `${nim.toLowerCase().replace(/[^a-z0-9]/g, '')}@${INTERNAL_DOMAIN}`
-      const row = { nim, nama, login: String(r.email ?? '').trim() ? email : nim, password: '', status: '' }
+      const row = { nim, nama, login: String(r.email ?? '').trim() ? email : nim, password: '', status: '', student_id: '' }
       if (!nim || !nama) { row.status = 'GAGAL: NIM/Nama kosong'; results.push(row); continue }
 
       const password = randomPassword()
@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
           .upsert({ class_id, student_id: studentId }, { onConflict: 'class_id,student_id' })
         if (e2) row.status += ' (gagal masuk kelas: ' + e2.message + ')'
       }
+      row.student_id = studentId ?? ''
       results.push(row)
     }
     return json({ results })

@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { readStudentRows, downloadExcel } from './importers.js'
 import { callFunction } from './functionsApi.js'
+import PrintCards from './PrintCards.jsx'
+import { buildCards } from './cards.js'
+import { loginLabel } from './cardsUtil.js'
 
 const CHUNK = 25
 
@@ -15,6 +18,7 @@ export default function StudentImport({ profile }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const ref = useRef()
+  const [cards, setCards] = useState(null)
 
   useEffect(() => {
     // admin: semua kelas; dosen: hanya kelas yang ia ampu
@@ -44,6 +48,8 @@ export default function StudentImport({ profile }) {
   }
 
   const created = results ? results.filter(r => r.status === 'DIBUAT').length : 0
+  const printable = results ? results.filter(r => r.status === 'DIBUAT' && r.password && r.student_id) : []
+  const printAll = async () => setCards(await buildCards(printable.map(r => ({ student_id: r.student_id, name: r.nama, nim: r.nim, login: loginLabel(r.login, r.nim), password: r.password }))))
   return (
     <div>
       <div className="bar"><h2>Impor Mahasiswa</h2></div>
@@ -84,6 +90,7 @@ export default function StudentImport({ profile }) {
           <p className="warn">Password hanya tampil sekali. Unduh daftar ini dan simpan dengan aman.</p>
           <div className="row">
             <button onClick={() => downloadExcel(results.map(r => ({ NIM: r.nim, Nama: r.nama, 'Login (Email/NIM)': r.login, 'Password Awal': r.password, Status: r.status })), 'akun_mahasiswa.xlsx', 'Akun')}>Unduh daftar akun (Excel)</button>
+            <button className="ghost" onClick={printAll} disabled={!printable.length}>Cetak kartu peserta ({printable.length})</button>
           </div>
           <div className="scroll"><table>
             <thead><tr><th>NIM</th><th>Nama</th><th>Login</th><th>Password</th><th>Status</th></tr></thead>
@@ -91,6 +98,7 @@ export default function StudentImport({ profile }) {
           </table></div>
         </div>
       )}
+      {cards && <PrintCards cards={cards.list} note={cards.note} onClose={() => setCards(null)} />}
     </div>
   )
 }

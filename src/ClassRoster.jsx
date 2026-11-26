@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { downloadExcel } from './importers.js'
 import ResetPasswordButton from './ResetPassword.jsx'
+import PrintCards from './PrintCards.jsx'
+import { callFunction } from './functionsApi.js'
+import { buildCards } from './cards.js'
+import { loginLabel } from './cardsUtil.js'
 
 // Admin: kelola dosen pengampu & mahasiswa. Dosen: lihat kelas yang ditugaskan (hanya baca).
 export default function Classes({ profile }) {
@@ -56,7 +60,7 @@ export default function Classes({ profile }) {
                 <button className="ghost danger" onClick={() => remove(c)}>Hapus</button></td>
             </tr>
           ))}
-          {!shown.length && <tr><td colSpan={6}>{admin ? 'Belum ada kelas. Klik “+ Buat Kelas”.' : 'Belum ada kelas. Klik “+ Buat Kelas” untuk membuat kelas Anda sendiri, atau minta admin menugaskan kelas.'}</td></tr>}
+          {!shown.length && <tr><td colSpan={7}>{admin ? 'Belum ada kelas. Klik “+ Buat Kelas”.' : 'Belum ada kelas. Klik “+ Buat Kelas” untuk membuat kelas Anda sendiri, atau minta admin menugaskan kelas.'}</td></tr>}
         </tbody>
       </table></div>
 
@@ -131,7 +135,33 @@ function ClassDetail({ cls, admin, onBack }) {
     if (error) setErr(error.message); else loadRoster()
   }
 
+  const [selected, setSelected] = useState(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [cards, setCards] = useState(null)
+  const toggleOne = id => { const n = new Set(selected); n.has(id) ? n.delete(id) : n.add(id); setSelected(n) }
+  const bulkReset = async () => {
+    const ids = [...selected]
+    if (!ids.length) return
+    if (!confirm(`Buat password BARU untuk ${ids.length} mahasiswa dan cetak kartunya?\n\nPassword lama mereka tidak berlaku lagi.`)) return
+    setBulkBusy(true); setErr(''); setOk('')
+    const okRows = [], failed = []
+    try {
+      for (let i = 0; i < ids.length; i += 25) {
+        const data = await callFunction('reset-password', { user_ids: ids.slice(i, i + 25) })
+        for (const r of data.results) (r.status === 'OK' ? okRows : failed).push(r)
+      }
+    } catch (e) { setErr(e.message) }
+    if (okRows.length) {
+      setCards(await buildCards(okRows.map(r => ({ student_id: r.user_id, name: r.name, nim: r.nim, login: loginLabel(r.login, r.nim), password: r.password }))))
+      setOk(`${okRows.length} password berhasil dibuat.`)
+      setSelected(new Set())
+    }
+    if (failed.length) setErr(`${failed.length} gagal: ${failed.map(f => f.name + ' (' + f.status.replace('GAGAL: ', '') + ')').join('; ')}`)
+    setBulkBusy(false)
+  }
   const shown = useMemo(() => roster.filter(s => `${s.nim} ${s.full_name} ${s.email}`.toLowerCase().includes(q.toLowerCase())), [roster, q])
+  const allSel = shown.length > 0 && shown.every(x => selected.has(x.student_id))
+  const toggleAll = () => setSelected(allSel ? new Set() : new Set(shown.map(x => x.student_id)))
   const available = allDosen.filter(d => !lecturers.some(l => l.lecturer_id === d.id))
   const exportXlsx = () => downloadExcel(roster.map((s, i) => ({ No: i + 1, NIM: s.nim, Nama: s.full_name, Email: s.email, Status: s.is_active ? 'Aktif' : 'Nonaktif' })),
     `mahasiswa_${cls.course_code}_${cls.class_name}.xlsx`.replace(/\s+/g, '_'), 'Mahasiswa')
@@ -140,7 +170,8 @@ function ClassDetail({ cls, admin, onBack }) {
     <div>
       <div className="bar"><div><button className="ghost" onClick={onBack}>← Kembali</button>
         <h2>{cls.course_name} — Kelas {cls.class_name}</h2></div>
-        <button className="ghost" onClick={exportXlsx} disabled={!roster.length}>Unduh Excel</button></div>
+        <div className="row"><button onClick={bulkReset} disabled={!selected.size || bulkBusy}>{bulkBusy ? 'Memproses…' : `Reset & cetak kartu (${selected.size})`}</button>
+          <button className="ghost" onClick={exportXlsx} disabled={!roster.length}>Unduh Excel</button></div></div>
       <p className="muted">{cls.term_label} · {roster.length} mahasiswa{!admin && cls.lecturers ? ` · Pengampu: ${cls.lecturers}` : ''}</p>
       {err && <p className="error">{err}</p>}{ok && <p className="okmsg">{ok}</p>}
 
@@ -176,17 +207,18 @@ function ClassDetail({ cls, admin, onBack }) {
       <div className="bar" style={{ marginTop: 16 }}><h3 style={{ margin: 0 }}>Daftar mahasiswa</h3>
         <input placeholder="Cari NIM / nama…" value={q} onChange={e => setQ(e.target.value)} style={{ width: 240 }} /></div>
       <div className="scroll"><table>
-        <thead><tr><th>#</th><th>NIM</th><th>Nama</th><th>Login (email)</th><th>Status</th><th /></tr></thead>
+        <thead><tr><th><input type="checkbox" checked={allSel} onChange={toggleAll} title="Pilih semua" /></th><th>#</th><th>NIM</th><th>Nama</th><th>Login (email)</th><th>Status</th><th /></tr></thead>
         <tbody>
           {shown.map((s, i) => (
-            <tr key={s.student_id}><td>{i + 1}</td><td>{s.nim}</td><td>{s.full_name}</td><td>{s.email}</td>
+            <tr key={s.student_id}><td><input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleOne(s.student_id)} /></td><td>{i + 1}</td><td>{s.nim}</td><td>{s.full_name}</td><td>{s.email}</td>
               <td><span className={`badge ${s.is_active ? 'AKTIF' : 'TERKUNCI'}`}>{s.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
-              <td className="actions"><ResetPasswordButton user={{ id: s.student_id, name: s.full_name }} />
+              <td className="actions"><ResetPasswordButton printable user={{ id: s.student_id, name: s.full_name }} />
                 <button className="ghost danger" onClick={() => removeStudent(s)}>Keluarkan</button></td></tr>
           ))}
-          {!shown.length && <tr><td colSpan={6}>{roster.length ? 'Tidak ada yang cocok.' : 'Belum ada mahasiswa di kelas ini.'}</td></tr>}
+          {!shown.length && <tr><td colSpan={7}>{roster.length ? 'Tidak ada yang cocok.' : 'Belum ada mahasiswa di kelas ini.'}</td></tr>}
         </tbody>
       </table></div>
+      {cards && <PrintCards cards={cards.list} note={cards.note} onClose={() => setCards(null)} />}
     </div>
   )
 }

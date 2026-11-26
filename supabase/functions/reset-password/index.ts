@@ -1,4 +1,5 @@
-// Edge Function: reset password pengguna dengan password acak baru.
+// Edge Function: reset password dengan password acak baru.
+// Masukan: { user_id } (satu pengguna)  ATAU  { user_ids: [...] } (maks. 25 pengguna).
 // ADMIN : boleh mereset DOSEN, MAHASISWA, PROKTOR (bukan sesama ADMIN, bukan akun sendiri).
 // DOSEN : hanya MAHASISWA yang berada di kelas yang ia ampu.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
@@ -31,36 +32,64 @@ Deno.serve(async (req) => {
     if (!me || !me.is_active || !['ADMIN', 'DOSEN'].includes(me.role))
       return json({ error: 'Hanya admin atau dosen yang boleh mereset password' }, 403)
 
-    // 2. Target
-    const { user_id } = await req.json()
-    if (!user_id || typeof user_id !== 'string') return json({ error: 'user_id wajib diisi' }, 400)
-    if (user_id === u.user.id) return json({ error: 'Untuk akun Anda sendiri, gunakan tautan "Forgot your password?" di halaman login' }, 400)
-    const { data: target } = await admin.from('profiles').select('id, role, full_name, nim_nip').eq('id', user_id).maybeSingle()
-    if (!target) return json({ error: 'Pengguna tidak ditemukan' }, 404)
+    // 2. Daftar target
+    const body = await req.json()
+    const single = typeof body.user_id === 'string'
+    const ids: string[] = single ? [body.user_id] : (Array.isArray(body.user_ids) ? body.user_ids : [])
+    if (!ids.length || ids.length > 25 || ids.some((i) => typeof i !== 'string'))
+      return json({ error: 'Kirim 1 sampai 25 pengguna per permintaan' }, 400)
 
-    // 3. Aturan hak akses
-    if (me.role === 'ADMIN') {
-      if (!['DOSEN', 'MAHASISWA', 'PROKTOR'].includes(target.role))
-        return json({ error: 'Password sesama admin tidak dapat direset dari sini' }, 403)
-    } else {
-      if (target.role !== 'MAHASISWA') return json({ error: 'Dosen hanya dapat mereset password mahasiswa' }, 403)
+    const { data: targets } = await admin.from('profiles').select('id, role, full_name, nim_nip').in('id', ids)
+    const byId = new Map((targets || []).map((t: { id: string }) => [t.id, t]))
+
+    // Dosen: mahasiswa mana saja yang berada di kelas yang ia ampu
+    let allowedStudents = new Set<string>()
+    if (me.role === 'DOSEN') {
       const { data: mine } = await admin.from('class_lecturers').select('class_id').eq('lecturer_id', u.user.id)
-      const ids = (mine || []).map((m: { class_id: string }) => m.class_id)
-      let ok = false
-      if (ids.length) {
-        const { data: link } = await admin.from('class_students').select('class_id')
-          .eq('student_id', user_id).in('class_id', ids).limit(1)
-        ok = !!link?.length
+      const cids = (mine || []).map((m: { class_id: string }) => m.class_id)
+      if (cids.length) {
+        const { data: links } = await admin.from('class_students').select('student_id')
+          .in('class_id', cids).in('student_id', ids)
+        allowedStudents = new Set((links || []).map((l: { student_id: string }) => l.student_id))
       }
-      if (!ok) return json({ error: 'Mahasiswa ini tidak berada di kelas yang Anda ampu' }, 403)
     }
 
-    // 4. Atur password baru
-    const password = randomPassword()
-    const { error } = await admin.auth.admin.updateUserById(user_id, { password })
-    if (error) return json({ error: 'Gagal mengatur password: ' + error.message }, 400)
-    const { data: au } = await admin.auth.admin.getUserById(user_id)
-    return json({ password, name: target.full_name, nim: target.nim_nip, login: au?.user?.email ?? '' })
+    const denied = (id: string): { msg: string; code: number } | null => {
+      if (id === u.user.id) return { msg: 'Untuk akun Anda sendiri, gunakan tautan "Forgot your password?" di halaman login', code: 400 }
+      const t = byId.get(id) as { role: string } | undefined
+      if (!t) return { msg: 'Pengguna tidak ditemukan', code: 404 }
+      if (me.role === 'ADMIN') {
+        return ['DOSEN', 'MAHASISWA', 'PROKTOR'].includes(t.role) ? null : { msg: 'Password sesama admin tidak dapat direset dari sini', code: 403 }
+      }
+      if (t.role !== 'MAHASISWA') return { msg: 'Dosen hanya dapat mereset password mahasiswa', code: 403 }
+      return allowedStudents.has(id) ? null : { msg: 'Mahasiswa ini tidak berada di kelas yang Anda ampu', code: 403 }
+    }
+
+    // 3. Proses
+    const results: Record<string, unknown>[] = []
+    let firstError: { msg: string; code: number } | null = null
+    for (const id of ids) {
+      const t = byId.get(id) as { full_name: string; nim_nip: string } | undefined
+      const base = { user_id: id, name: t?.full_name ?? '', nim: t?.nim_nip ?? '' }
+      const no = denied(id)
+      if (no) { firstError ??= no; results.push({ ...base, login: '', password: '', status: 'GAGAL: ' + no.msg }); continue }
+      const password = randomPassword()
+      const { error } = await admin.auth.admin.updateUserById(id, { password })
+      if (error) {
+        const msg = 'Gagal mengatur password: ' + error.message
+        firstError ??= { msg, code: 400 }
+        results.push({ ...base, login: '', password: '', status: 'GAGAL: ' + msg }); continue
+      }
+      const { data: au } = await admin.auth.admin.getUserById(id)
+      results.push({ ...base, login: au?.user?.email ?? '', password, status: 'OK' })
+    }
+
+    if (single) {
+      if (firstError) return json({ error: firstError.msg }, firstError.code)
+      const { status: _s, ...ok } = results[0] as Record<string, unknown>
+      return json(ok)
+    }
+    return json({ results })
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500)
   }

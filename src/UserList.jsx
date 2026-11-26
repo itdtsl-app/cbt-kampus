@@ -58,7 +58,7 @@ export default function UserList({ role }) {
               <td style={{ maxWidth: 280 }}><small>{u.classes || '—'}</small></td>
               <td><span className={`badge ${u.is_active ? 'AKTIF' : 'TERKUNCI'}`}>{u.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
               <td className="actions">
-                <ResetPasswordButton user={{ id: u.id, name: u.full_name }} />
+                <ResetPasswordButton printable={role === 'MAHASISWA'} user={{ id: u.id, name: u.full_name }} />
                 <button className="ghost danger" onClick={() => toggle(u)}>{u.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button>
               </td>
             </tr>
