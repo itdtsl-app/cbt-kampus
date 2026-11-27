@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import ResetPasswordButton from './ResetPassword.jsx'
 import AddUser from './AddUser.jsx'
 import BulkActions from './BulkActions.jsx'
+import CardsDialog from './CardsDialog.jsx'
 import { downloadExcel } from './importers.js'
 
 const PAGE = 50
@@ -17,9 +18,10 @@ export default function UserList({ role }) {
   const [search, setSearch] = useState('')
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState(new Set())
+  const [selected, setSelected] = useState(new Map()) // id -> data pengguna
   const [adding, setAdding] = useState(false)
   const [bulk, setBulk] = useState(false)
+  const [cardsOpen, setCardsOpen] = useState(false)
 
   useEffect(() => { const t = setTimeout(() => { setSearch(q); setPage(0) }, 350); return () => clearTimeout(t) }, [q])
 
@@ -49,12 +51,16 @@ export default function UserList({ role }) {
       `${role === 'DOSEN' ? 'dosen' : 'mahasiswa'}.xlsx`, role === 'DOSEN' ? 'Dosen' : 'Mahasiswa')
   }
 
+  const exportSelected = () => downloadExcel([...selected.values()].map((u, i) => ({
+    No: i + 1, [role === 'DOSEN' ? 'NIP/NIDN' : 'NIM']: u.nim, Nama: u.full_name,
+    Email: u.email?.endsWith(INTERNAL) ? '' : u.email, Kelas: u.classes, Status: u.is_active ? 'Aktif' : 'Nonaktif' })),
+    `${role === 'DOSEN' ? 'dosen' : 'mahasiswa'}_terpilih.xlsx`, role === 'DOSEN' ? 'Dosen' : 'Mahasiswa')
+
   // ---- pilihan ----
-  const pageIds = rows.map(r => r.id)
-  const pageAll = pageIds.length > 0 && pageIds.every(id => selected.has(id))
-  const toggleOne = id => { const n = new Set(selected); n.has(id) ? n.delete(id) : n.add(id); setSelected(n) }
-  const togglePage = () => { const n = new Set(selected); pageAll ? pageIds.forEach(i => n.delete(i)) : pageIds.forEach(i => n.add(i)); setSelected(n) }
-  const selectAllResults = async () => { const d = await fetchAll(); if (d) setSelected(new Set(d.map(u => u.id))) }
+  const pageAll = rows.length > 0 && rows.every(r => selected.has(r.id))
+  const toggleOne = u => { const n = new Map(selected); n.has(u.id) ? n.delete(u.id) : n.set(u.id, u); setSelected(n) }
+  const togglePage = () => { const n = new Map(selected); pageAll ? rows.forEach(r => n.delete(r.id)) : rows.forEach(r => n.set(r.id, r)); setSelected(n) }
+  const selectAllResults = async () => { const d = await fetchAll(); if (d) setSelected(new Map(d.map(u => [u.id, u]))) }
 
   const noun = role === 'DOSEN' ? 'dosen' : 'mahasiswa'
   const pages = Math.max(1, Math.ceil(total / PAGE))
@@ -71,7 +77,9 @@ export default function UserList({ role }) {
         <div className="selbar">
           <b>{selected.size} {noun} dipilih</b>
           {pageAll && total > selected.size && <button className="ghost" onClick={selectAllResults}>Pilih semua {total} hasil</button>}
-          <button className="ghost" onClick={() => setSelected(new Set())}>Kosongkan</button>
+          <button className="ghost" onClick={() => setSelected(new Map())}>Kosongkan</button>
+          <button className="ghost" onClick={exportSelected}>Ekspor Excel</button>
+          {role === 'MAHASISWA' && <button className="ghost" onClick={() => setCardsOpen(true)}>Kartu peserta…</button>}
           <button onClick={() => setBulk(true)}>Aksi massal…</button>
         </div>
       )}
@@ -83,7 +91,7 @@ export default function UserList({ role }) {
         <tbody>
           {rows.map((u, i) => (
             <tr key={u.id} className={selected.has(u.id) ? 'rowsel' : ''}>
-              <td><input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} /></td>
+              <td><input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u)} /></td>
               <td>{page * PAGE + i + 1}</td><td>{u.nim}</td><td><b>{u.full_name}</b></td>
               <td>{u.email?.endsWith(INTERNAL) ? <span className="muted">NIM</span> : u.email}</td>
               <td style={{ maxWidth: 280 }}><small>{u.classes || '—'}</small></td>
@@ -106,7 +114,9 @@ export default function UserList({ role }) {
       )}
 
       {adding && <AddUser onClose={() => setAdding(false)} onDone={load} />}
-      {bulk && <BulkActions role={role} ids={[...selected]} onClose={() => setBulk(false)} onDone={() => { setSelected(new Set()); load() }} />}
+      {bulk && <BulkActions role={role} ids={[...selected.keys()]} onClose={() => setBulk(false)} onDone={() => { setSelected(new Map()); load() }} />}
+      {cardsOpen && <CardsDialog students={[...selected.values()].map(u => ({ id: u.id, name: u.full_name, nim: u.nim, email: u.email }))}
+        onClose={() => setCardsOpen(false)} onDone={() => { setSelected(new Map()); load() }} />}
     </div>
   )
 }

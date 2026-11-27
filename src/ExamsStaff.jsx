@@ -26,6 +26,7 @@ export default function ExamsStaff({ profile }) {
   const [form, setForm] = useState(null)
   const [view, setView] = useState(null) // {type:'monitor'|'results', exam}
   const [err, setErr] = useState('')
+  const [notice, setNotice] = useState('')
 
   const load = async () => {
     const { data, error } = await supabase.from('exams').select('*, courses(name)').order('start_at', { ascending: false })
@@ -80,11 +81,17 @@ export default function ExamsStaff({ profile }) {
     // Susun daftar soal (hanya jika belum ada peserta yang mengerjakan)
     const { count } = await supabase.from('exam_participants').select('id', { count: 'exact', head: true }).eq('exam_id', id)
     if (!count) {
-      const { data: qs, error: qe } = await supabase.from('questions').select('id').eq('bank_id', form.bank_id)
+      const { data: qs, error: qe } = await supabase.from('questions').select('id, qtype').eq('bank_id', form.bank_id)
       if (qe) return setErr(qe.message)
       if (!qs.length) return setErr('Bank soal yang dipilih belum berisi soal.')
-      let ids = qs.map(q => q.id).sort(() => Math.random() - 0.5)
-      if (payload.question_count && payload.question_count < ids.length) ids = ids.slice(0, payload.question_count)
+      let picked = [...qs].sort(() => Math.random() - 0.5)
+      if (payload.question_count && payload.question_count < picked.length) picked = picked.slice(0, payload.question_count)
+      const ids = picked.map(q => q.id)
+      const LBL = { PG: 'Pilihan Ganda', PGK: 'PG Kompleks', BENAR_SALAH: 'Benar/Salah', MENJODOHKAN: 'Menjodohkan', ISIAN: 'Isian', ESAI: 'Esai' }
+      const comp = Object.entries(picked.reduce((m, q) => ({ ...m, [q.qtype]: (m[q.qtype] || 0) + 1 }), {})).map(([k, n]) => `${n} ${LBL[k] || k}`).join(', ')
+      const bankEssay = qs.filter(q => q.qtype === 'ESAI').length
+      const pickedEssay = picked.filter(q => q.qtype === 'ESAI').length
+      setNotice(`Ujian disimpan dengan ${ids.length} soal: ${comp}.` + (bankEssay && !pickedEssay ? ' PERHATIAN: bank soal berisi esai tetapi tidak ada yang terpilih. Kosongkan “Jumlah soal” bila ingin menyertakan semua soal.' : ''))
       await supabase.from('exam_questions').delete().eq('exam_id', id)
       const eq = await supabase.from('exam_questions').insert(ids.map((qid, i) => ({ exam_id: id, question_id: qid, order_no: i + 1 })))
       if (eq.error) return setErr(eq.error.message)
@@ -99,7 +106,7 @@ export default function ExamsStaff({ profile }) {
 
   if (view?.type === 'monitor') return <Monitor exam={view.exam} onBack={() => { setView(null); load() }} />
   if (view?.type === 'results') return <Results exam={view.exam} onBack={() => setView(null)} />
-  if (view?.type === 'essay') return <ExamEssay exam={view.exam} onBack={() => setView(null)} />
+  if (view?.type === 'essay') return <ExamEssay exam={view.exam} onBack={() => setView(null)} onMonitor={() => setView({ type: 'monitor', exam: view.exam })} />
   if (view?.type === 'analysis') return <ItemAnalysis exam={view.exam} onBack={() => setView(null)} />
 
   const f = form
@@ -107,6 +114,7 @@ export default function ExamsStaff({ profile }) {
     <div>
       <div className="bar"><h2>Ujian</h2>{canEdit && <button onClick={() => setForm({ ...DEFAULTS, start_at: toLocalInput(new Date()), end_at: toLocalInput(new Date(Date.now() + 3600e3)) })}>+ Jadwalkan Ujian</button>}</div>
       {err && !f && <p className="error">{err}</p>}
+      {notice && !f && <p className="warn" style={{ margin: '0 0 12px' }}>{notice}</p>}
       <div className="scroll"><table>
         <thead><tr><th>Judul</th><th>Mata Kuliah</th><th>Jadwal</th><th>Durasi</th><th>Status</th><th /></tr></thead>
         <tbody>

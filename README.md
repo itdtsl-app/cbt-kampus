@@ -50,3 +50,9 @@ Menu Daftar Dosen: + Tambah Dosen. Daftar Dosen/Mahasiswa: pilih banyak lalu Aks
 
 ## Tambahan: ubah password sendiri
 Tombol kunci di kartu pengguna (staf) dan tombol "Ubah password" di header mahasiswa. Tidak perlu SQL atau Edge Function baru.
+
+## Tambahan: ekspor Excel massal & perbaikan penilaian esai
+1. Jalankan `supabase/sql/cbt_kampus_perbaikan_esai.sql` (setelah `cbt_kampus_tahap5.sql`).
+2. Kartu peserta massal: pilih mahasiswa > **Kartu peserta…** (cetak dan/atau unduh Excel).
+3. Ekspor Excel terpilih: tombol **Ekspor Excel** pada daftar dosen/mahasiswa, dan **Unduh Excel (n terpilih)** pada daftar kelas.
+4. Fungsi kirim email (`send-cards`) sudah dihapus; jika sudah terlanjur dipasang di Supabase, hapus lewat menu Edge Functions.
