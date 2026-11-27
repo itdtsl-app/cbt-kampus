@@ -56,3 +56,8 @@ Tombol kunci di kartu pengguna (staf) dan tombol "Ubah password" di header mahas
 2. Kartu peserta massal: pilih mahasiswa > **Kartu peserta…** (cetak dan/atau unduh Excel).
 3. Ekspor Excel terpilih: tombol **Ekspor Excel** pada daftar dosen/mahasiswa, dan **Unduh Excel (n terpilih)** pada daftar kelas.
 4. Fungsi kirim email (`send-cards`) sudah dihapus; jika sudah terlanjur dipasang di Supabase, hapus lewat menu Edge Functions.
+
+## Tambahan: tinjau & nilai jawaban (esai dan isian)
+Jalankan `supabase/sql/cbt_kampus_tinjau_jawaban.sql` (setelah `cbt_kampus_perbaikan_esai.sql`).
+Menu Ujian > **Nilai jawaban**: tab Esai (nilai satu per satu) dan tab Isian (jawaban yang sama dikelompokkan; terima/tolak sekaligus).
+Catatan: soal Isian dinilai otomatis dan tidak muncul di tab Esai; soal Esai tampil sebagai kotak jawaban banyak baris.

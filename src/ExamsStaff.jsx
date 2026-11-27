@@ -126,7 +126,7 @@ export default function ExamsStaff({ profile }) {
               <td className="actions">
                 <button className="ghost" onClick={() => setView({ type: 'monitor', exam: e })}>Pantau</button>
                 <button className="ghost" onClick={() => setView({ type: 'results', exam: e })}>Hasil</button>
-                {profile.role !== 'PROKTOR' && <button className="ghost" onClick={() => setView({ type: 'essay', exam: e })}>Esai</button>}
+                {profile.role !== 'PROKTOR' && <button className="ghost" onClick={() => setView({ type: 'essay', exam: e })}>Nilai jawaban</button>}
                 {profile.role !== 'PROKTOR' && <button className="ghost" onClick={() => setView({ type: 'analysis', exam: e })}>Analisis</button>}
                 {canEdit && <button className="ghost" onClick={() => edit(e)}>Ubah</button>}
                 {canEdit && <button className="ghost danger" onClick={() => remove(e)}>Hapus</button>}
