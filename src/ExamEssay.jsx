@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
 const key = r => `${r.participant_id}|${r.question_id}`
@@ -82,7 +82,7 @@ function EssayTab({ rows, setRows, anon, loaded, diag, onMonitor }) {
     const { error } = await supabase.rpc('staff_set_score', { p_participant: r.participant_id, p_question: r.question_id, p_score: v })
     setSaving('')
     if (error) return setErr(error.message)
-    setRows(rows.map(x => (key(x) === key(r) ? { ...x, score: v, needs_manual: false } : x)))
+    setRows(rows.map(x => (key(x) === key(r) ? { ...x, score: v, needs_manual: false, scored_by_name: 'Anda' } : x)))
   }
   const answered = rows.filter(r => !r.is_blank), blanks = rows.length - answered.length
   const done = answered.filter(r => !r.needs_manual).length
@@ -107,10 +107,14 @@ function EssayTab({ rows, setRows, anon, loaded, diag, onMonitor }) {
                 {!r.is_blank && !r.needs_manual && <span className="okmsg">✓ dinilai</span>}</div>
               {r.is_blank ? <p className="muted" style={{ margin: 0 }}>(tidak dijawab)</p> : (<>
                 <p className="answer-text">{r.answer_text}</p>
-                <div className="row">
-                  <input type="number" min="0" max={r.max_score} step="0.5" style={{ width: 110 }} placeholder={`0–${r.max_score}`}
+                <div className="row start" style={{ flexWrap: 'wrap' }}>
+                  <input type="number" min="0" max={r.max_score} step="0.25" style={{ width: 110 }} placeholder={`0–${r.max_score}`}
                     value={draft[key(r)] ?? ''} onChange={e => setDraft({ ...draft, [key(r)]: e.target.value })} />
+                  <button type="button" className="ghost" onClick={() => setDraft({ ...draft, [key(r)]: 0 })}>0</button>
+                  <button type="button" className="ghost" onClick={() => setDraft({ ...draft, [key(r)]: Number((r.max_score / 2).toFixed(2)) })}>½</button>
+                  <button type="button" className="ghost" onClick={() => setDraft({ ...draft, [key(r)]: Number(r.max_score) })}>Penuh</button>
                   <button onClick={() => save(r)} disabled={saving === key(r)}>{saving === key(r) ? 'Menyimpan…' : 'Simpan skor'}</button>
+                  {r.scored_by_name && !r.needs_manual && <small className="muted">dinilai oleh {r.scored_by_name}</small>}
                 </div></>)}
             </div>
           ))}
@@ -120,39 +124,57 @@ function EssayTab({ rows, setRows, anon, loaded, diag, onMonitor }) {
   )
 }
 
-// ---------------- Isian: kelompokkan jawaban yang sama, terima/tolak sekaligus ----------------
+// ---------------- Isian: skor manual per kelompok jawaban & per peserta ----------------
 function IsianTab({ exam, rows, setRows, anon, loaded, diag, onMonitor }) {
   const [onlyWrong, setOnlyWrong] = useState(false)
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
   const [open, setOpen] = useState({})
+  const [vin, setVin] = useState({}) // input skor per kelompok jawaban
+  const [pin, setPin] = useState({}) // input skor per peserta
   const answered = rows.filter(r => !r.is_blank)
   const why = !answered.length && loaded ? explainEmpty(diag, 'ISIAN') : null
 
+  const same = list => (list.every(r => Number(r.score ?? -1) === Number(list[0].score ?? -1)) ? list[0].score : undefined)
+  const scoreLabel = list => { const v = same(list); return v === undefined ? 'bervariasi' : v === null ? 'belum' : `${Number(v)} / ${Number(list[0].max_score)}` }
   const statusOf = list => {
     const ok = list.filter(r => r.score !== null && Number(r.score) >= Number(r.max_score)).length
     const zero = list.filter(r => Number(r.score ?? 0) === 0).length
-    return ok === list.length ? 'benar' : zero === list.length ? 'salah' : 'campur'
+    return ok === list.length ? 'benar' : zero === list.length ? 'salah' : 'sebagian'
   }
-  const apply = async (qid, v, correct) => {
+  const valid = (val, max) => { const n = Number(val); return val !== '' && val !== undefined && Number.isFinite(n) && n >= 0 && n <= max ? n : null }
+
+  const applyGroup = async (qid, v, val, max) => {
+    const n = valid(val, max)
+    if (n === null) return setErr(`Skor harus angka antara 0 dan ${max}.`)
     setBusy(qid + v.norm); setErr('')
-    const { error } = await supabase.rpc('staff_bulk_set_score', { p_exam: exam.id, p_question: qid, p_answer: v.text, p_correct: correct })
+    const { error } = await supabase.rpc('staff_bulk_score', { p_exam: exam.id, p_question: qid, p_answer: v.text, p_score: n })
     setBusy('')
     if (error) return setErr(error.message)
     const ids = new Set(v.rows.map(key))
-    setRows(rows.map(r => (ids.has(key(r)) ? { ...r, score: correct ? r.max_score : 0 } : r)))
+    setRows(rows.map(r => (ids.has(key(r)) ? { ...r, score: n, needs_manual: false, scored_by_name: 'Anda' } : r)))
+  }
+  const applyOne = async r => {
+    const n = valid(pin[key(r)], Number(r.max_score))
+    if (n === null) return setErr(`Skor harus angka antara 0 dan ${r.max_score}.`)
+    setBusy(key(r)); setErr('')
+    const { error } = await supabase.rpc('staff_set_score', { p_participant: r.participant_id, p_question: r.question_id, p_score: n })
+    setBusy('')
+    if (error) return setErr(error.message)
+    setRows(rows.map(x => (key(x) === key(r) ? { ...x, score: n, needs_manual: false, scored_by_name: 'Anda' } : x)))
   }
 
   return (
     <div>
-      <p className="muted">Soal isian dinilai otomatis dengan mencocokkan kunci. Di sini Anda bisa melihat semua jawaban peserta dan <b>menerima</b> variasi yang sebenarnya benar (misalnya “4.000” atau “4000 gram”). Jawaban yang sama otomatis dikelompokkan.</p>
-      <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={onlyWrong} onChange={e => setOnlyWrong(e.target.checked)} />Hanya jawaban yang dinilai salah</label>
+      <p className="muted">Soal isian dinilai otomatis dengan mencocokkan kunci. Di sini Anda bisa melihat semua jawaban peserta dan <b>memberi skor manual</b> (0 sampai bobot soal, boleh desimal). Jawaban yang sama dikelompokkan: skor yang Anda isi berlaku untuk seluruh kelompok. Klik <b>Rincian</b> untuk menilai peserta satu per satu.</p>
+      <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={onlyWrong} onChange={e => setOnlyWrong(e.target.checked)} />Hanya jawaban yang belum bernilai penuh</label>
       {err && <p className="error">{err}</p>}
       {why && <Why why={why} onMonitor={onMonitor} />}
       {loaded && !rows.length && !why && <p className="muted">Ujian ini tidak memiliki soal isian, atau belum ada peserta yang selesai.</p>}
 
       {groupBy(rows).map(g => {
         const ans = g.filter(r => !r.is_blank)
+        const max = Number(g[0].max_score)
         const map = new Map()
         for (const r of ans) { const k = norm(r.answer_text); if (!map.has(k)) map.set(k, { norm: k, text: r.answer_text, rows: [] }); map.get(k).rows.push(r) }
         let variants = [...map.values()].sort((a, b) => b.rows.length - a.rows.length)
@@ -161,21 +183,42 @@ function IsianTab({ exam, rows, setRows, anon, loaded, diag, onMonitor }) {
         return (
           <div className="card full" key={g[0].question_id}>
             <h3>{g[0].question_body}</h3>
-            <p className="muted">Kunci: <b>{keyText(g[0].answer_key) || '—'}</b> · bobot {g[0].max_score} · {ans.length} menjawab{g.length - ans.length ? `, ${g.length - ans.length} kosong` : ''}</p>
+            <p className="muted">Kunci: <b>{keyText(g[0].answer_key) || '—'}</b> · bobot {max} · {ans.length} menjawab{g.length - ans.length ? `, ${g.length - ans.length} kosong` : ''}</p>
             <div className="scroll"><table>
-              <thead><tr><th>Jawaban peserta</th><th>Jumlah</th><th>Penilaian</th><th /></tr></thead>
+              <thead><tr><th>Jawaban peserta</th><th>Jumlah</th><th>Skor</th><th>Beri skor ke semua yang menjawab sama</th></tr></thead>
               <tbody>{variants.map(v => {
-                const st = statusOf(v.rows), id = g[0].question_id + v.norm
+                const id = g[0].question_id + v.norm
+                const st = statusOf(v.rows)
                 return (
-                  <tr key={id}>
-                    <td><b>{v.text}</b>{open[id] && !anon && <div><small>{v.rows.map(r => `${r.nim} ${r.full_name}`).join('; ')}</small></div>}</td>
-                    <td>{v.rows.length}{!anon && <button className="ghost" onClick={() => setOpen({ ...open, [id]: !open[id] })}>{open[id] ? 'sembunyikan' : 'nama'}</button>}</td>
-                    <td><span className={`badge ${st === 'benar' ? 'AKTIF' : st === 'salah' ? 'TERKUNCI' : ''}`}>{st === 'benar' ? 'Benar' : st === 'salah' ? 'Salah' : 'Campur'}</span></td>
-                    <td className="actions">
-                      {st !== 'benar' && <button className="ghost" disabled={busy === id} onClick={() => apply(g[0].question_id, v, true)}>Terima (benar)</button>}
-                      {st !== 'salah' && <button className="ghost danger" disabled={busy === id} onClick={() => apply(g[0].question_id, v, false)}>Tolak (salah)</button>}
-                    </td>
-                  </tr>)
+                  <Fragment key={id}>
+                    <tr>
+                      <td><b>{v.text}</b></td>
+                      <td>{v.rows.length}</td>
+                      <td><span className={`badge ${st === 'benar' ? 'AKTIF' : st === 'salah' ? 'TERKUNCI' : ''}`}>{scoreLabel(v.rows)}</span></td>
+                      <td>
+                        <div className="row start" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                          <input type="number" min="0" max={max} step="0.25" style={{ width: 84 }} placeholder={`0–${max}`}
+                            value={vin[id] ?? ''} onChange={e => setVin({ ...vin, [id]: e.target.value })} />
+                          <button disabled={busy === id} onClick={() => applyGroup(g[0].question_id, v, vin[id], max)}>Simpan</button>
+                          <button className="ghost" disabled={busy === id} onClick={() => applyGroup(g[0].question_id, v, max, max)}>Penuh</button>
+                          <button className="ghost danger" disabled={busy === id} onClick={() => applyGroup(g[0].question_id, v, 0, max)}>0</button>
+                          <button className="ghost" onClick={() => setOpen({ ...open, [id]: !open[id] })}>{open[id] ? 'Tutup' : 'Rincian'}</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {open[id] && (
+                      <tr><td colSpan={4} style={{ background: '#f8fafc' }}>
+                        {v.rows.map((r, i) => (
+                          <div className="row start" key={key(r)} style={{ alignItems: 'center', padding: '4px 0', flexWrap: 'wrap' }}>
+                            <span style={{ minWidth: 220 }}>{anon ? `Peserta ${i + 1}` : `${r.nim} — ${r.full_name}`}</span>
+                            <small className="muted" style={{ minWidth: 70 }}>skor {r.score === null ? '—' : Number(r.score)}</small>
+                            <input type="number" min="0" max={max} step="0.25" style={{ width: 84 }} placeholder={`0–${max}`}
+                              value={pin[key(r)] ?? ''} onChange={e => setPin({ ...pin, [key(r)]: e.target.value })} />
+                            <button className="ghost" disabled={busy === key(r)} onClick={() => applyOne(r)}>Simpan</button>
+                            {r.scored_by_name && <small className="muted">dinilai oleh {r.scored_by_name}</small>}
+                          </div>))}
+                      </td></tr>)}
+                  </Fragment>)
               })}</tbody>
             </table></div>
           </div>)

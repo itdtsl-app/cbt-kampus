@@ -61,3 +61,7 @@ Tombol kunci di kartu pengguna (staf) dan tombol "Ubah password" di header mahas
 Jalankan `supabase/sql/cbt_kampus_tinjau_jawaban.sql` (setelah `cbt_kampus_perbaikan_esai.sql`).
 Menu Ujian > **Nilai jawaban**: tab Esai (nilai satu per satu) dan tab Isian (jawaban yang sama dikelompokkan; terima/tolak sekaligus).
 Catatan: soal Isian dinilai otomatis dan tidak muncul di tab Esai; soal Esai tampil sebagai kotak jawaban banyak baris.
+
+## Tambahan: penilaian manual (skor angka)
+Jalankan `supabase/sql/cbt_kampus_nilai_manual.sql` (setelah `cbt_kampus_tinjau_jawaban.sql`).
+Tab Esai dan Isian: isi skor 0 sampai bobot soal (boleh desimal). Isian: skor berlaku untuk semua jawaban yang sama, atau per peserta lewat Rincian. Tercatat siapa yang menilai.

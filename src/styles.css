@@ -275,3 +275,4 @@ tr.rowsel td { background: #eff6ff !important; }
 .tabs { display: flex; align-items: center; gap: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 14px; }
 .tab { background: transparent; color: #475569; border-radius: 8px 8px 0 0; padding: 8px 16px; font-weight: 600; margin-bottom: -2px; border-bottom: 2px solid transparent; }
 .tab.on { color: var(--brand); border-bottom-color: var(--brand); background: #fff; }
+.row.start { justify-content: flex-start; }
